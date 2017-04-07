@@ -6,9 +6,9 @@
 //--------------------- Simple helper functions -------------------//
 async function main() {
 	await muiDialogs.alert({
-	  title: 'My title',
-	  content: 'My message',
-	  okLabel: 'Ok'
+		title: 'My title',
+		content: 'My message',
+		okLabel: 'Ok'
 	})
 }
 main()
@@ -19,21 +19,24 @@ class TestReduxFormDialog extends PureComponent {
 	formDialogRef = formDialog => {
 		this.formDialog = formDialog;
 	}
-
-	showDialog = async() => {
+	
+	showForm = async() => {
 		const values = await this.formDialog.show();
-		// values can be null if the dialog is cancelled
+		// values is null if the dialog was cancelled
+		console.log("values", values);
 	}
 	
 	render() {
 		return (
-            <ReduxFormDialog
-                ref={this.formDialogRef}
-                title="Form Title"
-            >
-              <AnyReduxForm />
-            </ReduxFormDialog>
-        )
+			<FlatButton onTouchTap={this.showForm} label="ShowForm"/>
+			<ReduxFormDialog
+				ref={this.formDialogRef}
+				title="Form Title"
+			>
+				<AnyReduxForm />
+			</ReduxFormDialog>
+		)
 	}
 }
+// you can use the showForm function directly, but you'll have to provide the Redux store as an argument.
 ```

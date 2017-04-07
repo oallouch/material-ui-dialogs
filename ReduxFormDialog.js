@@ -1,21 +1,10 @@
-import React, {PureComponent, PropTypes} from 'react';
+import React, {PureComponent} from 'react';
 import { Provider } from 'react-redux';
 import FlatButton from 'material-ui/FlatButton';
 
 import { showDialog } from './material-ui-dialogs';
 
 class ReduxFormDialog extends PureComponent {
-	static propTypes = {
-		title: PropTypes.string,
-		onCancel: PropTypes.func,
-		children: PropTypes.element.isRequired
-	};
-
-	static defaultProps = {
-		title: 'Form',
-		onCancel: () => {}
-	};
-
 	static contextTypes = {
 		store: React.PropTypes.shape({
 			subscribe: React.PropTypes.func.isRequired,
@@ -39,50 +28,79 @@ class ReduxFormDialog extends PureComponent {
 	 * @return {Promise}
 	 */
 	show(initialValues) {
-		let dialogResolve;
-		//----------------- okCancelActions ---------------------//
-		const okCancelActions = [
-      <FlatButton
-        label="Cancel"
-        secondary={ true }
-        action={ this.cancelAction }
-      />,
-      <FlatButton
-        label="Ok"
-        primary={ true }
-        action={ this.okAction }
-      />,
-		];
-
-		//---- formElement cloning ----//
-		// we don't use the contentComponent provided by the action callback, because it's only the <Provider>
-		let formElement = React.Children.only(this.props.children); // there's only 1 child (fixed in PropTypes)
-		formElement = React.cloneElement(formElement, {
-			onSubmit: values => { // can be called on keyboard (like the 'enter' key)
-				dialogResolve(values);
-			},
-			ref: formComponentArg => {
-				this.formComponent = fromComponentToForm(formComponentArg);
-			},
-			initialValues
-		});
-
-		return showDialog({
-			resolveRef: resolve => { dialogResolve = resolve; },
-			actions: okCancelActions,
+		return showForm({
+			form: React.Children.only(this.props.children),
+			store: this.store,
+			initialValues,
 			title: this.props.title,
 			contentStyle: this.props.contentStyle,
 			autoScrollBodyContent: this.props.autoScrollBodyContent,
-			content:
-        <Provider store={this.store}>
-					{formElement}
-        </Provider>
 		});
 	}
 
 	render() {
 		return null;
 	}
+}
+
+/**
+ * @param store
+ * @param form
+ * @param title optional
+ * @param initialValues optional
+ * @param cancelLabel default value: "Cancel"
+ * @param okLabel default value: "Ok"
+ * @param contentStyle optional
+ * @param autoScrollBodyContent optional
+ * @returns {Promise}
+ */
+export function showForm({title = "Form", form, initialValues, cancelLabel = "cancel", okLabel = "ok", store, contentStyle, autoScrollBodyContent}) {
+	let dialogResolve;
+	let formComponent;
+
+	//----------------- okCancelActions ---------------------//
+	const cancelAction = (resolve, contentComponent) => resolve(null);
+	const okAction = async (resolve, contentComponentArg) => { // contentComponentArg is the Provider
+		//---- submit call on the form component ----//
+		await formComponent.submit();
+	};
+	const okCancelActions = [
+		<FlatButton
+			label={cancelLabel}
+			secondary={true}
+			action={cancelAction}
+		/>,
+		<FlatButton
+			label={okLabel}
+			primary={true}
+			action={okAction}
+		/>,
+	];
+
+	//----------------- formElement cloning ------------------//
+	// we don't use the contentComponent provided by the action callback, because it's only the <Provider>
+	let formElement = React.cloneElement(form, {
+		onSubmit: values => { // can be called on keyboard (like the 'enter' key)
+			dialogResolve(values);
+		},
+		ref: formComponentArg => {
+			formComponent = fromComponentToForm(formComponentArg);
+		},
+		initialValues
+	});
+
+	return showDialog({
+		resolveRef: resolve => { dialogResolve = resolve; },
+		actions: okCancelActions,
+		title: title,
+		contentStyle: contentStyle,
+		autoScrollBodyContent: autoScrollBodyContent,
+		content:
+			<Provider store={store}>
+				{formElement}
+			</Provider>
+	});
+
 }
 
 export function fromComponentToForm(component) {
